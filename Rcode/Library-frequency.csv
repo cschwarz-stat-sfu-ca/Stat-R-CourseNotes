@@ -1,0 +1,26 @@
+"","lib2","Freq"
+"1","as.character(x$lib2",1
+"2","boot",4
+"3","car",22
+"4","cl, library(unmarked",1
+"5","data.table",1
+"6","doMC",1
+"7","dplyr",3
+"8","emmeans",18
+"9","GGally",6
+"10","ggforce",3
+"11","ggfortify",6
+"12","ggmap",3
+"13","ggplot2",24
+"14","grep -iR ""library("" *.R >temp1 ",1
+"15","grep -iR ""library("" *.r >temp2 ",1
+"16","gridExtra",20
+"17","hms",1
+"18","lubridate",2
+"19","nycflights13",2
+"20","plyr",29
+"21","readxl",20
+"22","reshape2",1
+"23","sf",2
+"24","spData",4
+"25","tidyr",1

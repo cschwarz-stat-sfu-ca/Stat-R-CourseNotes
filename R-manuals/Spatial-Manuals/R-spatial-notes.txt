@@ -1,0 +1,32 @@
+These are some suggested URLs to help with spatial data processing in R.
+
+
+Spatial data analysis book
+   http://www.spatialanalysisonline.com/An%20Introduction%20to%20Spatial%20Data%20Analysis%20in%20R.pdf
+
+A nice introduction to spatial analysis at an intermediate level
+   https://rspatial.org/
+
+Note on spatial data analysis
+   https://cran.r-project.org/doc/contrib/intro-spatial-rl.pdf
+
+Task view from CRAN
+    https://cran.r-project.org/web/views/Spatial.html
+
+Geocomputation with R
+   https://geocompr.robinlovelace.net/
+
+Getting started
+   https://www.jessesadler.com/post/gis-with-r-intro/
+
+R-spatial blog
+    https://www.r-spatial.org/
+
+R-spatial course
+   https://cengel.github.io/rspatial/
+
+Datasets for spatial analysis
+   https://github.com/Nowosad/spData
+
+http://pierreroudier.github.io/teaching/20170626-Pedometrics/20170626-soil-data.html
+ 

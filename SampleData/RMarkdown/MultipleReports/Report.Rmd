@@ -1,0 +1,152 @@
+---
+title: "`r paste('A simple analysis of the cereal dataset for', my.cereal$mfr[1])`"
+author: "Carl Schwarz"
+date: '`r format(Sys.time(), "%Y-%m-%d")`'
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+  word_document:
+    fig_caption: yes
+    reference_docx: SampleRmarkdown-Template-STYLE.docx
+    toc: yes
+  pdf_document:
+    number_sections: yes
+    toc: yes
+    fig_caption: true
+---
+
+```{r setup, include=FALSE}
+# Links for RMarkdown help
+
+# Information about RMarkdown is at: http://rmarkdown.rstudio.com
+
+# Chunk options      https://yihui.name/knitr/options/
+
+# Dealing with word templates and Rmarkdown
+#    http://stackoverflow.com/questions/41982700/how-to-properly-number-headings-in-word-from-a-rmarkdown-document
+#    http://rmarkdown.rstudio.com/articles_docx.html   
+#    http://rmarkdown.rstudio.com/word_document_format.html
+
+# Here we open the libraries needed and source any other code as needed
+knitr::opts_chunk$set(echo = TRUE)
+
+library(car)
+library(emmeans)
+library(ggplot2)
+library(gridExtra)
+library(knitr)
+library(pander)
+library(plyr)
+library(readxl)
+library(reshape2)
+
+source('http://www.stat.sfu.ca/~cschwarz/Stat-650/Notes/MyPrograms/schwarz.functions.r')
+
+
+# Get the raw data and do editing. This won't appear in the report, but gives you 
+# an audit trail of what you did to the raw data before creating the rest of the
+# template
+
+# The next two lies are for testing purposes only.
+#cereal <- read.csv('cereal.csv', 
+#              header=TRUE, as.is=TRUE, strip.white=TRUE)
+
+cereal <- my.cereal  # this is the chunk that will be analysed from the d_ply
+
+# Define new variables and factors (for categorical variables). CHeck the structure of the data frame
+cereal$shelfF <- factor(cereal$shelf)
+```
+
+
+```{r eval=FALSE, echo=FALSE}
+# Refer to the cheat sheets for RMarkdown.
+
+# Common problems include:
+# - Don't add extra spaces after a periods before a new line. Otherwise the
+#   text will break at this point and not run together.
+```
+
+# Introduction
+What is the relationship between the calories in a serving of breakfast
+cereal and the grams of fat.
+
+
+# Material and Methods
+A sample of `r nrow(cereal)` cereals were sampled from a local grocery store from this manufacturer
+and the nutritional information (e.g. number of grams of fat, protein, carbohydrates, etc.)
+and the number of calories per serving was extracted. 
+The display shelf on which the cereal was stored was also recorded.
+
+A simple linear regression was used to estimate the relationship between calories and fat.
+
+All computations were performed using `r R.Version()$version.string`.
+
+
+# Results
+The data was screened for outliers and no unusal points were located.
+
+This table summarizes the calories per serving by shelf number.
+```{r Table1.summary, echo=FALSE, message=FALSE, warning=FALSE, results="asis"}
+# Comput the summary statstics for each shelf
+cereal$shelfc <- recode(cereal$shelf,
+                      " 1='Low'; 2='Middle'; 3='High' ")
+xtabs(~shelfc+shelf, data=cereal)
+
+cereal$shelfcF <- factor(cereal$shelfc, levels=c("Low","Middle","High"), order=TRUE)
+
+report <- plyr::ddply(cereal, c("shelfcF"), plyr::summarize,
+                   ncereal = length(calories),
+                   mean    = round(mean(calories),1),
+                   min     = min(calories),
+                   max     = max(calories),
+                   sd      = round(sd(calories),1))
+
+# Create the output table
+colnames(report) <- c(
+       "Shelf",
+       "n",
+       "Mean\ncalories\nper\nserving",
+       "Min\ncalories\nper\nserving",
+       "Max\ncalories\nper\nserving",
+       "SD\ncalories\nper\nserving"
+    )
+pandoc.table(report,
+             caption="Summary statistics on calories per serving",
+             justify='lrrrrr',
+             split.cells=c(1,1,1,1,1,1))
+
+```
+
+This figure shows a graphical display of the calories per serving vs.\ the 
+amount of fat in a serving.
+
+```{r echo=FALSE, fig.height=4, fig.width=6, dpi=300}
+plot <- ggplot(data=cereal, aes(x=fat, y=calories))+
+   ggtitle("Calories by fat")+
+   geom_point( position=position_jitter(h=.2, w=.2))+
+   ylab("Calories per serving")+
+   geom_smooth(method="lm", se=FALSE)
+plot
+
+```
+
+```{r echo=FALSE }
+calories.fit <- lm(calories ~ fat, data=cereal)
+calories.pvalue <- anova(calories.fit)$"Pr(>F)"[1]
+calories.slope <- coef(calories.fit)[2]
+calories.slope.se <- sqrt(diag(vcov(calories.fit)))[2]
+```
+
+There was `r ifelse(calories.pvalue<.05,"some","no")`
+evidence of a relationship
+between the calories per serving and the amount of fat (p=`r format.pval(calories.pvalue,eps=.001)`). 
+The estimated slope was 
+`r round(calories.slope,2)` (SE
+`r round(calories.slope.se,2)`).
+
+
+# Summary
+We found `r ifelse(calories.pvalue<.05,"some","no")` evidence that the mean number of calories varied with the amount of fat in a serving of cereal.
+
+

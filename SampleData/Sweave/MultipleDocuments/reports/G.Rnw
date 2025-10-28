@@ -1,0 +1,146 @@
+% Get the selected campground data from the brewing function
+
+
+\documentclass{article}
+
+\title{Analysis of Cereal data \Sexpr{cereal$mfr[1]}}
+
+\author{Carl James Schwarz}
+
+%\date{}
+
+
+\begin{document}
+
+\maketitle
+
+<<Setup,include=FALSE>>=
+# Links for Sweave
+
+# Information about Sweave is at: https://rpubs.com/YaRrr/SweaveIntro
+# Chunk options      https://yihui.name/knitr/options/
+
+#Here we open the libraries needed and source any other code as needed
+
+library(car)
+library(ggplot2)
+library(gridExtra)
+library(knitr)
+library(Hmisc)
+library(emmeans)
+library(pander)
+library(plyr)
+library(readxl)
+library(reshape2)
+
+source('http://www.stat.sfu.ca/~cschwarz/Stat-650/Notes/MyPrograms/schwarz.functions.r')
+
+
+# Only for debugging
+#
+#cereal <- read.csv('cereal.csv', 
+#              header=TRUE, as.is=TRUE, strip.white=TRUE)
+
+# Define new variables and factors (for categorical variables). CHeck the structure of the data frame
+cereal$shelfF <- factor(cereal$shelf)
+@
+
+
+\section{Introduction}
+What is the relationship between the calories in a serving of breakfast
+cereal and the placement of the cereal on the shelf in the supermarket?
+
+
+\section{Material and Methods}
+A sample of \Sexpr{nrow(cereal)} cereals were sampled from a local grocery store
+and the nutritional information (e.g. number of grams of fat, protein, carbohydrates, etc.)
+and the number of calories per serving was extracted. 
+The display shelf on which the cereal was stored was also recorded.
+
+Regression analysis was used to look at the relationship between
+the calories per serving and the fat content per serving.
+
+All computations were performed using \Sexpr{R.Version()$version.string}.
+
+
+\section{Results}
+The data was screened for outliers and no unusal points were located.
+
+Table~\ref{tab:table1} summarizes the calories per serving by shelf number.
+<<Table1.summary, echo=FALSE, message=FALSE, warning=FALSE, results="asis">>=
+# Compute the summary statstics for each shelf
+cereal$shelfc <- recode(cereal$shelf,
+                      " 1='Low'; 2='Middle'; 3='High' ")
+#xtabs(~shelfc+shelf, data=cereal)
+
+cereal$shelfcF <- factor(cereal$shelfc, levels=c("Low","Middle","High"), order=TRUE)
+
+report <- plyr::ddply(cereal, c("shelfcF"), plyr::summarize,
+                   ncereal = length(calories),
+                   mean    = round(mean(calories),1),
+                   min     = min(calories),
+                   max     = max(calories),
+                   sd      = round(sd(calories),1))
+
+#Create the output table
+colheads <- c(
+       "Shelf",
+       "n",
+       "Mean\ncalories\nper\nserving",
+       "Min\ncalories\nper\nserving",
+       "Max\ncalories\nper\nserving",
+       "SD\ncalories\nper\nserving"
+    )
+latex( report,
+       file="", where="b",
+       rowname=NULL,
+       caption="Summary statistics by shelf location",
+       label="tab:table1",
+       colheads=colheads,
+       col.just=c("l",rep("r",5)))
+@
+
+Figure~\ref{fig:scatter} shows a graphical display of the calories per serving.
+
+<<plot1,echo=FALSE, fig.height=4, fig.width=6, dpi=300>>=
+plot <- ggplot(data=cereal, aes(x=fat, y=calories))+
+   #ggtitle("Calories vs. fat content")+
+   geom_point( position=position_jitter(h=.2, w=.2))+
+   geom_smooth(method="lm", se=FALSE)+
+   ylab("Calories per serving")
+@
+
+\begin{figure}[h] 
+\begin{center} 
+<<echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=6>>=
+plot
+@
+\end{center}
+\caption{Calories by shelf height}
+\label{fig:scatter}
+\end{figure}
+
+
+<<anova,echo=FALSE >>=
+calories.fit <- lm(calories ~ shelfcF, data=cereal)
+calories.pvalue <- anova(calories.fit)$"Pr(>F)"[1]
+calories.slope <- coef(calories.fit)[2]
+calories.slope.se <- sqrt(diag(vcov(calories.fit)))[2]
+
+
+@
+
+There was \Sexpr{ifelse(calories.pvalue<.05,"some","no")} evidence  of a difference in the mean calories per serving
+varied with the amount of fat (p=\Sexpr{format.pval(calories.pvalue,digits=3,eps=.001)}).
+The estimated slope was 
+\Sexpr{round(calories.slope,2)} (SE
+\Sexpr{round(calories.slope.se,2)}).
+
+\section{Summary}
+We found \Sexpr{ifelse(calories.pvalue<.05,"some","no")}
+evidence that the mean number of calories varied with fat content.
+
+
+\end{document}
+# we need a blank line at the end (See Reproducible Research with R and Rstudio, page 247)
+

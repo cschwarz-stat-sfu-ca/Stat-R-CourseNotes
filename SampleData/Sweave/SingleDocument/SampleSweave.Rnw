@@ -1,0 +1,168 @@
+\documentclass{article}
+
+\title{Analysis of Cereal data}
+\author{Carl James Schwarz}
+
+%\date{}
+
+
+\begin{document}
+\SweaveOpts{concordance=TRUE}
+
+\maketitle
+
+<<Setup,include=FALSE>>=
+# Links for Sweave
+
+# Information about Sweave is at: https://rpubs.com/YaRrr/SweaveIntro
+# Chunk options      https://yihui.name/knitr/options/
+
+#Here we open the libraries needed and source any other code as needed
+
+library(car)
+library(emmeans)
+library(ggplot2)
+library(gridExtra)
+library(knitr)
+library(Hmisc)
+library(emmeans)
+library(pander)
+library(plyr)
+library(readxl)
+library(reshape2)
+
+source('http://www.stat.sfu.ca/~cschwarz/Stat-650/Notes/MyPrograms/schwarz.functions.r')
+
+
+# Get the raw data and do editing. This won't appear in the report, but gives you 
+# an audit trail of what you did to the raw data before creating the rest of the
+# template
+
+cereal <- read.csv('cereal.csv', 
+              header=TRUE, as.is=TRUE, strip.white=TRUE)
+
+# Define new variables and factors (for categorical variables). CHeck the structure of the data frame
+cereal$shelfF <- factor(cereal$shelf)
+@
+
+
+\section{Introduction}
+What is the relationship between the calories in a serving of breakfast
+cereal and the placement of the cereal on the shelf in the supermarket?
+
+
+\section{Material and Methods}
+A sample of \Sexpr{nrow(cereal)} cereals were sampled from a local grocery store
+and the nutritional information (e.g. number of grams of fat, protein, carbohydrates, etc.)
+and the number of calories per serving was extracted. 
+The display shelf on which the cereal was stored was also recorded.
+
+A single-factor Completely Randomized Design (CRD) analysis of variance was
+used to compare the mean number of calories of cereals from each display
+shelf. This was followed by a Tukey multiple comparison procedure
+to investigate among which shelves the mean may differ.
+
+All computations were performed using \Sexpr{R.Version()$version.string}.
+
+
+\section{Results}
+The data was screened for outliers and no unusual points were located.
+
+Table~\ref{tab:table1} summarizes the calories per serving by shelf number.
+<<Table1.summary, echo=FALSE, message=FALSE, warning=FALSE,results=tex>>=
+# Compute the summary statstics for each shelf
+cereal$shelfc <- recode(cereal$shelf,
+                      " 1='Low'; 2='Middle'; 3='High' ")
+#xtabs(~shelfc+shelf, data=cereal)
+
+cereal$shelfcF <- factor(cereal$shelfc, levels=c("Low","Middle","High"), order=TRUE)
+
+report <- plyr::ddply(cereal, c("shelfcF"), plyr::summarize,
+                   ncereal = length(calories),
+                   mean    = round(mean(calories),1),
+                   min     = min(calories),
+                   max     = max(calories),
+                   sd      = round(sd(calories),1))
+
+#Create the output table
+colheads <- c(
+       "Shelf",
+       "n",
+       "Mean\ncalories\nper\nserving",
+       "Min\ncalories\nper\nserving",
+       "Max\ncalories\nper\nserving",
+       "SD\ncalories\nper\nserving"
+    )
+latex( report,
+       file="", where="b",
+       rowname=NULL,
+       caption="Summary statistics by shelf location",
+       label="tab:table1",
+       colheads=colheads,
+       col.just=c("l",rep("r",5)))
+@
+
+Figure~\ref{fig:scatter} shows a graphical display of the calories per serving.
+
+<<plot1,echo=FALSE, fig.height=4, fig.width=6, dpi=300>>=
+plot <- ggplot(data=cereal, aes(x=shelfcF, y=calories))+
+   #ggtitle("Calories by shelf height")+
+   geom_point( position=position_jitter(h=.2, w=.2))+
+   geom_boxplot(alpha=0.2, outlier.size=0)+
+   ylab("Calories per serving")
+@
+
+\begin{figure}[h] 
+\begin{center} 
+<<echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=6>>=
+plot
+@
+\end{center}
+\caption{Calories by shelf height}
+\label{fig:scatter}
+\end{figure}
+
+
+<<anova,echo=FALSE >>=
+calories.fit <- lm(calories ~ shelfcF, data=cereal)
+calories.pvalue <- anova(calories.fit)$"Pr(>F)"[1]
+
+sugars.fit <- lm(sugars ~ shelfcF, data=cereal)
+sugars.pvalue <- anova(sugars.fit)$"Pr(>F)"[1]
+
+@
+
+There was no evidence (p=\Sexpr{round(calories.pvalue,2)}) of a difference in the mean calories per serving
+among the shelf height. But there was evidence of a difference in the mean grams of sugar per
+serving among the shelf height (p=\Sexpr{round(sugars.pvalue,2)}). A bar graph (Figure~\ref{fig:sugarcld}) of the mean grams
+per serving is shown below. There was no evidence that the mean amount of sugar per serving varied
+between the \textit{Low} and \textit{High} shelves, but there was evidence that the mean of both shelves
+differed from that on the \textit{Middle} shelf.
+
+<<emmeans,echo=FALSE >>=
+sugars.lsmo <- emmeans::emmeans(sugars.fit, ~shelfcF)
+sugars.cld <- emmeans::CLD(sugars.lsmo)
+sugar.cld.plot <- sf.cld.plot.bar(sugars.cld, "shelfcF")+
+   xlab("Shelf heigh\nwith Tukey comparison")+ylab("Mean grams of sugar (95% ci)")
+@
+
+\begin{figure}[h] 
+\begin{center} 
+<<echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=6>>=
+sugar.cld.plot
+@
+\end{center}
+\caption{Comparing the mean sugar content among shelves}
+\label{fig:sugarcld}
+\end{figure}
+
+
+\section{Summary}
+We found no evidence that the mean number of calories varied among shelve heights, but there
+was evidence the the mean amount of sugars did.
+
+
+
+
+
+\end{document}
